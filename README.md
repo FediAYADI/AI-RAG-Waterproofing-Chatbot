@@ -107,3 +107,13 @@ Please read CONTRIBUTING.md for guidelines on contributing to this project.
 ## License
 
 MIT License
+
+
+activate and deactivate virtual environment:
+```bash
+# activate
+.\venv\Scripts\Activate.ps1
+
+# deactivate
+deactivate
+```
