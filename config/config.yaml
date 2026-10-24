@@ -1,0 +1,92 @@
+# AI RAG Waterproofing Chatbot Configuration
+
+app:
+  name: "AI RAG Waterproofing Chatbot"
+  version: "1.0.0"
+  description: "RAG-based chatbot for waterproofing consultation"
+  debug: false
+
+server:
+  host: "0.0.0.0"
+  port: 8000
+  workers: 4
+  reload: false
+  cors:
+    enabled: true
+    origins:
+      - "http://localhost:3000"
+      - "http://localhost:5173"
+    allow_credentials: true
+    allow_methods:
+      - "*"
+    allow_headers:
+      - "*"
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "./logs/app.log"
+  max_bytes: 10485760  # 10MB
+  backup_count: 5
+
+database:
+  url: "sqlite:///./data/chatbot.db"
+  echo: false
+
+vector_db:
+  type: "chromadb"  # chromadb, faiss, pinecone
+  path: "./data/vector_store"
+  collection_name: "waterproofing_docs"
+  dimension: 1536
+
+pinecone:
+  api_key: "${PINECONE_API_KEY}"
+  environment: "${PINECONE_ENVIRONMENT}"
+  index_name: "waterproofing-chatbot"
+
+embedding:
+  model: "text-embedding-ada-002"
+  provider: "openai"
+  batch_size: 100
+  dimension: 1536
+
+llm:
+  provider: "openai"  # openai, anthropic, local
+  model: "gpt-4"
+  temperature: 0.7
+  max_tokens: 2000
+  streaming: true
+
+rag:
+  chunk_size: 1000
+  chunk_overlap: 200
+  top_k_retrieval: 5
+  retrieval_strategy: "similarity"  # similarity, mmr, hybrid
+  rerank: false
+  rerank_model: "cross-encoder"
+
+processing:
+  max_file_size: 10485760  # 10MB
+  allowed_extensions:
+    - ".pdf"
+    - ".txt"
+    - ".docx"
+    - ".md"
+  clean_text: true
+  remove_stopwords: false
+
+cache:
+  enabled: true
+  ttl: 3600  # 1 hour
+  backend: "memory"  # memory, redis
+
+redis:
+  host: "localhost"
+  port: 6379
+  db: 0
+  password: null
+
+monitoring:
+  enabled: true
+  metrics_port: 9090
+  trace_enabled: false
