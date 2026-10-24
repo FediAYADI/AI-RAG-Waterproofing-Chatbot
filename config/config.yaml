@@ -72,6 +72,9 @@ processing:
     - ".txt"
     - ".docx"
     - ".md"
+    - ".csv"
+    - ".xls"
+    - ".xlsx"
   clean_text: true
   remove_stopwords: false
 
