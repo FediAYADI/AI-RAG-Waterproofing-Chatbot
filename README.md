@@ -117,3 +117,6 @@ activate and deactivate virtual environment:
 # deactivate
 deactivate
 ```
+
+
+api key opoenai : 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

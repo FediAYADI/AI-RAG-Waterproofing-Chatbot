@@ -16,8 +16,16 @@ async def lifespan(app: FastAPI):
     """Application lifespan manager"""
     # Startup
     print("Starting AI RAG Waterproofing Chatbot...")
-    # Initialize vector database
-    # Initialize LLM connections
+    # Initialize services
+    try:
+        from services.vector_service import vector_service
+        print(f"Vector database initialized at {settings.vector_db.path}")
+        print(f"Collection: {settings.vector_db.collection_name}")
+        stats = vector_service.get_collection_stats()
+        print(f"Document count: {stats.get('document_count', 0)}")
+    except Exception as e:
+        print(f"Warning: Could not initialize vector database: {str(e)}")
+    
     yield
     # Shutdown
     print("Shutting down AI RAG Waterproofing Chatbot...")

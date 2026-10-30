@@ -3,6 +3,9 @@ Document Processor - Handles text extraction from various file formats
 """
 
 import os
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from typing import List, Tuple
 import pypdf
 from docx import Document
