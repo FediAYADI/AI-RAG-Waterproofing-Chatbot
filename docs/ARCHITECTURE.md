@@ -2,121 +2,39 @@
 
 ## System Overview
 
-The AI RAG Waterproofing Chatbot is a backend API service with an embeddable JavaScript widget. The backend provides RAG-based conversational AI capabilities through RESTful APIs, while the widget allows easy integration into any existing website without framework dependencies.
+The AI RAG Waterproofing Chatbot is a Python RAG pipeline used from the terminal through `backend/cli.py`. The pipeline is organized in layers so that a different front end (for example a web API for website integration) can be added later on top of `RAGEngine` without changing the core.
 
 ## Components
 
-### Backend Architecture
-
 ```
 backend/
-├── api/              # API Layer
-│   ├── routes/       # Route definitions
-│   └── middleware/   # CORS, auth, logging
-├── core/             # Core Business Logic
-│   ├── config.py     # Configuration management
-│   ├── rag_engine.py # RAG orchestration
-│   └── document_processor.py
-├── models/           # Data Models
-│   ├── schemas.py    # Pydantic schemas
-│   └── database.py   # SQLAlchemy models
-├── services/         # Service Layer
-│   ├── vector_service.py    # Vector DB operations
-│   ├── llm_service.py       # LLM interactions
-│   └── embedding_service.py # Text embeddings
-└── utils/            # Utilities
-    ├── text_processing.py
-    └── logger.py
+├── cli.py            # Terminal interface: chat, ask, ingest, stats
+├── core/             # Core business logic
+│   ├── config.py             # Configuration (config/config.yaml + config/.env)
+│   ├── rag_engine.py         # RAG orchestration (query + ingestion)
+│   └── document_processor.py # Text extraction and chunking
+└── services/         # Service layer
+    ├── vector_service.py     # ChromaDB operations
+    ├── llm_service.py        # LLM interactions (OpenAI / Anthropic)
+    └── embedding_service.py  # Text embeddings (OpenAI / HuggingFace)
 ```
 
-### Widget Architecture
+## Data Flow
 
-```
-widget/
-├── chat-widget.js            # Main widget script (vanilla JS)
-└── integration-example.html  # Example integration
-```
+1. **Document Ingestion** (`python backend/cli.py ingest`)
+   - Files → `DocumentProcessor` (text extraction) → chunking → `EmbeddingService` → `VectorService` (ChromaDB)
 
-The widget is designed to be:
-- **Framework-agnostic**: Works with any website (React, Vue, Angular, vanilla HTML, etc.)
-- **Self-contained**: Single script file with embedded styles
-- **Customizable**: Configurable via initialization options
-- **Lightweight**: No external dependencies
-
-### Data Flow
-
-1. **Document Ingestion**
-   - Admin uploads documents via API → Document Processor → Text Extraction → Chunking → Embedding → Vector Store
-
-2. **Query Processing (via Widget)**
-   - User types in widget → API → Query Embedding → Vector Search → Context Retrieval → LLM Generation → Response → Widget Display
-
-3. **Conversation Management**
-   - Messages stored in database → Session persistence → Context window management
+2. **Query Processing** (`python backend/cli.py chat`)
+   - User question → query embedding → vector search (top-k) → context formatting → `LLMService` → answer + sources printed in the terminal
 
 ## Technology Stack
 
-### Backend
-- **Framework**: FastAPI
-- **RAG**: LangChain
-- **Vector DB**: ChromaDB (primary), with support for Faiss and Pinecone
-- **LLM**: OpenAI GPT-4 (primary), with Anthropic Claude support
-- **Database**: SQLite (development), PostgreSQL (production)
-- **Async**: asyncio, uvicorn
-
-### Widget
-- **Language**: Vanilla JavaScript (ES6+)
-- **Styling**: Embedded CSS
-- **HTTP Client**: Fetch API
-- **No Dependencies**: Self-contained script
-
-## Deployment Architecture
-
-### Development
-- Local development with hot reload
-- SQLite database
-- ChromaDB in-memory or persistent
-- Widget served from local file or CDN
-
-### Production
-- Containerized deployment (Docker)
-- PostgreSQL database
-- Redis for caching
-- Load balancer (Nginx)
-- Vector DB: Pinecone or hosted ChromaDB
-- Widget hosted on CDN for performance
-
-## Integration Points
-
-### Website Integration
-The widget integrates into existing websites via:
-1. Script tag inclusion
-2. Initialization with configuration
-3. REST API communication with backend
-4. No backend changes required on the host website
-
-### API Endpoints
-- `POST /api/v1/chat` - Chat queries from widget
-- `GET /api/v1/chat/sessions/{id}` - Chat history
-- `POST /api/v1/documents/upload` - Document ingestion (admin)
-- `GET /api/v1/documents` - List documents (admin)
-- `DELETE /api/v1/documents/{id}` - Delete documents (admin)
+- **Vector DB**: ChromaDB (persistent, `data/vector_store/`)
+- **Embeddings**: OpenAI `text-embedding-ada-002` (default) or HuggingFace SentenceTransformers
+- **LLM**: OpenAI GPT-4 (default) or Anthropic Claude
+- **Document parsing**: pypdf, python-docx, pandas/openpyxl
 
 ## Security Considerations
 
-- API key management through environment variables
-- CORS configuration for widget API access
-- Input validation and sanitization
-- Rate limiting on API endpoints
-- Secure file upload handling for document ingestion
-- Database encryption at rest
-- Widget domain whitelisting (optional)
-
-## Scalability
-
-- Horizontal scaling through load balancer
-- Vector database sharding
-- Caching layer (Redis)
-- Asynchronous processing
-- CDN hosting for widget script
-- Session management with Redis
+- API keys are read from `config/.env` (gitignored), never from source code
+- Input files are parsed locally; only text chunks are sent to the embedding/LLM providers

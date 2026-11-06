@@ -110,6 +110,7 @@ class RAGEngine:
         Returns:
             List of source dictionaries
         """
+        documents = search_results.get("documents", [[]])
         metadatas = search_results.get("metadatas", [[]])
         distances = search_results.get("distances", [[]])
         
@@ -117,11 +118,13 @@ class RAGEngine:
             return []
         
         sources = []
-        for meta, dist in zip(metadatas[0], distances[0]):
+        for doc, meta, dist in zip(documents[0], metadatas[0], distances[0]):
             source = {
                 "source": meta.get("source", "Unknown") if meta else "Unknown",
                 "page": meta.get("page", "N/A") if meta else "N/A",
-                "relevance": round(1 - dist, 3)
+                "chunk_index": meta.get("chunk_index") if meta else None,
+                "relevance": round(1 - dist, 3),
+                "content": doc
             }
             sources.append(source)
         
@@ -142,7 +145,7 @@ class RAGEngine:
         Returns:
             Dictionary with ingestion results
         """
-        from document_processor import processor
+        from core.document_processor import processor
         
         try:
             # Extract text
