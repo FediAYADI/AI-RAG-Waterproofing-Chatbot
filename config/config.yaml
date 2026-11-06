@@ -21,7 +21,7 @@ vector_db:
   type: "chromadb"  # chromadb, faiss, pinecone
   path: "./data/vector_store"
   collection_name: "waterproofing_docs"
-  dimension: 1536
+  dimension: 384
 
 pinecone:
   api_key: "${PINECONE_API_KEY}"
@@ -29,17 +29,17 @@ pinecone:
   index_name: "waterproofing-chatbot"
 
 embedding:
-  model: "text-embedding-ada-002"
-  provider: "openai"
+  model: "sentence-transformers/all-MiniLM-L6-v2"
+  provider: "huggingface"
   batch_size: 100
-  dimension: 1536
+  dimension: 384
 
 llm:
-  provider: "openai"  # openai, anthropic, local
-  model: "gpt-4"
+  provider: "local"  # openai, anthropic, local
+  model: "microsoft/phi-2"
   temperature: 0.7
-  max_tokens: 2000
-  streaming: true
+  max_tokens: 500
+  streaming: false
 
 rag:
   chunk_size: 1000

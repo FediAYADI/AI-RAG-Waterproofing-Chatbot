@@ -28,22 +28,22 @@ class VectorDBConfig(BaseSettings):
     type: str = "chromadb"
     path: str = "./data/vector_store"
     collection_name: str = "waterproofing_docs"
-    dimension: int = 1536
+    dimension: int = 384
 
 
 class EmbeddingConfig(BaseSettings):
-    model: str = "text-embedding-ada-002"
-    provider: str = "openai"
+    model: str = "sentence-transformers/all-MiniLM-L6-v2"
+    provider: str = "huggingface"
     batch_size: int = 100
-    dimension: int = 1536
+    dimension: int = 384
 
 
 class LLMConfig(BaseSettings):
-    provider: str = "openai"
-    model: str = "gpt-4"
+    provider: str = "local"
+    model: str = "microsoft/phi-2"
     temperature: float = 0.7
-    max_tokens: int = 2000
-    streaming: bool = True
+    max_tokens: int = 500
+    streaming: bool = False
 
 
 class RAGConfig(BaseSettings):

@@ -5,12 +5,17 @@ RAG Engine - Orchestrates the Retrieval-Augmented Generation pipeline
 from typing import List, Dict, Optional
 import os
 import sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Add backend to path
+backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
 
 from services.embedding_service import embedding_service
 from services.vector_service import vector_service
 from services.llm_service import llm_service
 from core.config import settings
+from core.document_processor import processor
 
 
 class RAGEngine:
@@ -38,43 +43,57 @@ class RAGEngine:
         Returns:
             Dictionary with answer and sources
         """
-        if not use_rag:
-            # Direct LLM response without RAG
-            response = llm_service.generate_response(
-                query=query,
-                context="",
-                conversation_history=conversation_history
+        try:
+            if not use_rag:
+                # Direct LLM response without RAG
+                response = llm_service.generate_response(
+                    query=query,
+                    context="",
+                    conversation_history=conversation_history
+                )
+                return {
+                    "answer": response,
+                    "sources": [],
+                    "used_rag": False
+                }
+            
+            # Step 1: Retrieve relevant documents
+            print(f"Searching for: {query}")
+            search_results = vector_service.search_by_text(
+                query_text=query,
+                n_results=self.top_k
             )
+            print(f"Search results: {len(search_results.get('documents', [[]])[0])} documents found")
+            
+            # Step 2: Format context from retrieved documents
+            context = self._format_context(search_results)
+            
+            # Step 3: Generate response with context
+            try:
+                answer = llm_service.generate_response(
+                    query=query,
+                    context=context,
+                    conversation_history=conversation_history
+                )
+            except Exception as llm_error:
+                # If LLM fails, return the context directly
+                answer = f"Based on the retrieved documents:\n\n{context}\n\n(Note: LLM generation failed: {str(llm_error)})"
+            
+            # Step 4: Format sources
+            sources = self._format_sources(search_results)
+            
             return {
-                "answer": response,
+                "answer": answer,
+                "sources": sources,
+                "used_rag": True
+            }
+        except Exception as e:
+            import traceback
+            return {
+                "answer": f"Error processing query: {str(e)}\n\nTraceback:\n{traceback.format_exc()}",
                 "sources": [],
                 "used_rag": False
             }
-        
-        # Step 1: Retrieve relevant documents
-        search_results = vector_service.search_by_text(
-            query_text=query,
-            n_results=self.top_k
-        )
-        
-        # Step 2: Format context from retrieved documents
-        context = self._format_context(search_results)
-        
-        # Step 3: Generate response with context
-        answer = llm_service.generate_response(
-            query=query,
-            context=context,
-            conversation_history=conversation_history
-        )
-        
-        # Step 4: Format sources
-        sources = self._format_sources(search_results)
-        
-        return {
-            "answer": answer,
-            "sources": sources,
-            "used_rag": True
-        }
     
     def _format_context(self, search_results: Dict) -> str:
         """

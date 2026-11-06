@@ -5,7 +5,11 @@ Vector Database Service - Handles vector storage and retrieval
 from typing import List, Dict, Optional
 import os
 import sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Add backend to path
+backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
 
 import chromadb
 from chromadb.config import Settings

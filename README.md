@@ -1,4 +1,4 @@
-# AI RAG Waterproofing Chatbot
+﻿# AI RAG Waterproofing Chatbot
 
 A RAG (Retrieval-Augmented Generation) chatbot specialized in waterproofing and construction materials. It searches a knowledge base of supplier documents (Sika, GEKO, Isomat, Derbigum, Afrochim technical sheets, brochures and product lists) and generates answers grounded in the retrieved content.
 
@@ -10,7 +10,7 @@ During the current development phase the chatbot is used **exclusively from the 
 2. **Chunking** – text is split into overlapping chunks (`rag.chunk_size` / `rag.chunk_overlap`).
 3. **Embedding** – `EmbeddingService` embeds chunks (OpenAI or HuggingFace).
 4. **Vector storage** – `VectorService` stores chunks in a persistent ChromaDB collection (`data/vector_store/`).
-5. **Retrieval + generation** – `RAGEngine` retrieves the top-k chunks for a question and `LLMService` (OpenAI or Anthropic) answers using them as context.
+5. **Retrieval + generation** – `RAGEngine` retrieves the top-k chunks for a question and `LLMService` (local HuggingFace model, OpenAI or Anthropic) answers using them as context.
 
 ## Project Structure
 
@@ -47,10 +47,10 @@ python -m venv venv
 source venv/bin/activate          # Windows (PowerShell): .\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 
-cp config/.env.example config/.env  # then set OPENAI_API_KEY (or ANTHROPIC_API_KEY)
+cp config/.env.example config/.env  # API keys are only needed for the openai/anthropic providers
 ```
 
-Providers and models are configured in `config/config.yaml` (`embedding` and `llm` sections).
+Providers and models are configured in `config/config.yaml` (`embedding` and `llm` sections). The default runs fully locally: `sentence-transformers/all-MiniLM-L6-v2` embeddings and the `microsoft/phi-2` LLM, downloaded on first use.
 
 ## Usage
 
@@ -84,7 +84,7 @@ You: Quelle est la consommation de Sikalastic-560 ?
 Assistant: ...
 
 Sources:
-  [1] data/processed/sika tunisie/Fiche Technique/Sikalastic-560.PDF, chunk 2 (relevance: 0.87)
+  [1] data/processed/sika_tunisie/Fiche Technique/Sikalastic-560.PDF, chunk 2 (relevance: 0.87)
   ...
 
 You: exit
