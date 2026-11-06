@@ -22,12 +22,23 @@ class EmbeddingService:
         self.provider = settings.embedding.provider
         self.model = settings.embedding.model
         self.dimension = settings.embedding.dimension
-        
-        if self.provider == "openai":
-            self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        elif self.provider == "huggingface":
+        self._client = None
+        self._hf_model = None
+
+    @property
+    def client(self):
+        """OpenAI client, created on first use so commands that never embed need no key"""
+        if self._client is None:
+            self._client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        return self._client
+
+    @property
+    def hf_model(self):
+        """SentenceTransformer model, loaded on first use"""
+        if self._hf_model is None:
             from sentence_transformers import SentenceTransformer
-            self.model = SentenceTransformer(self.model)
+            self._hf_model = SentenceTransformer(self.model)
+        return self._hf_model
     
     def embed_text(self, text: str) -> List[float]:
         """
@@ -88,7 +99,7 @@ class EmbeddingService:
     def _embed_huggingface(self, text: str) -> List[float]:
         """Generate embedding using HuggingFace SentenceTransformers"""
         try:
-            embedding = self.model.encode(text)
+            embedding = self.hf_model.encode(text)
             return embedding.tolist()
         except Exception as e:
             raise Exception(f"HuggingFace embedding failed: {str(e)}")
@@ -96,7 +107,7 @@ class EmbeddingService:
     def _embed_huggingface_batch(self, texts: List[str]) -> List[List[float]]:
         """Generate embeddings for multiple texts using HuggingFace"""
         try:
-            embeddings = self.model.encode(texts)
+            embeddings = self.hf_model.encode(texts)
             return [emb.tolist() for emb in embeddings]
         except Exception as e:
             raise Exception(f"HuggingFace batch embedding failed: {str(e)}")

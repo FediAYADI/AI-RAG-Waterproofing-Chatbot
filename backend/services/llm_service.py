@@ -27,23 +27,36 @@ class LLMService:
         self.temperature = settings.llm.temperature
         self.max_tokens = settings.llm.max_tokens
         self.streaming = settings.llm.streaming
-        
-        if self.provider == "openai":
-            self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        elif self.provider == "anthropic":
-            self.client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-        elif self.provider == "local":
-            # Load local HuggingFace model
-            print(f"Loading local model: {self.model}")
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model)
-            self.model_obj = AutoModelForCausalLM.from_pretrained(
-                self.model,
-                torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-                device_map="auto" if torch.cuda.is_available() else None
-            )
-            if not torch.cuda.is_available():
-                self.model_obj = self.model_obj.to('cpu')
-            print("Local model loaded successfully")
+        self._client = None
+        self.tokenizer = None
+        self.model_obj = None
+
+    @property
+    def client(self):
+        """API client, created on first use so commands that never call the LLM need no key"""
+        if self._client is None:
+            if self.provider == "openai":
+                self._client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            elif self.provider == "anthropic":
+                self._client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+            else:
+                raise ValueError(f"Unsupported LLM provider: {self.provider}")
+        return self._client
+
+    def _load_local_model(self):
+        """Load the local HuggingFace model on first use (ingest/stats never need it)"""
+        if self.model_obj is not None:
+            return
+        print(f"Loading local model: {self.model}")
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model)
+        self.model_obj = AutoModelForCausalLM.from_pretrained(
+            self.model,
+            torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+            device_map="auto" if torch.cuda.is_available() else None
+        )
+        if not torch.cuda.is_available():
+            self.model_obj = self.model_obj.to('cpu')
+        print("Local model loaded successfully")
     
     def generate_response(
         self,
@@ -138,6 +151,7 @@ class LLMService:
     ) -> str:
         """Generate response using local HuggingFace model"""
         try:
+            self._load_local_model()
             system_prompt = "You are a waterproofing expert assistant. Use the provided context to answer questions accurately and professionally."
             
             prompt = f"{system_prompt}\n\nContext:\n{context}\n\nQuestion: {query}\n\nAnswer:"
