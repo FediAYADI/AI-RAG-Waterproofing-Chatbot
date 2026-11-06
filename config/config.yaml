@@ -6,22 +6,6 @@ app:
   description: "RAG-based chatbot for waterproofing consultation"
   debug: false
 
-server:
-  host: "0.0.0.0"
-  port: 8000
-  workers: 4
-  reload: false
-  cors:
-    enabled: true
-    origins:
-      - "http://localhost:3000"
-      - "http://localhost:5173"
-    allow_credentials: true
-    allow_methods:
-      - "*"
-    allow_headers:
-      - "*"
-
 logging:
   level: "INFO"
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

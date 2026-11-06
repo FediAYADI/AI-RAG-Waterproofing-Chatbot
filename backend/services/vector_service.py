@@ -135,7 +135,7 @@ class VectorService:
         Returns:
             Dictionary with search results
         """
-        from embedding_service import embedding_service
+        from services.embedding_service import embedding_service
         
         try:
             query_embedding = embedding_service.embed_text(query_text)
