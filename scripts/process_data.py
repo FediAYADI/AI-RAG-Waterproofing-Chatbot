@@ -8,8 +8,8 @@ import os
 # Add backend to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend'))
 
-from backend.core.rag_engine import rag_engine
-from backend.services.vector_service import vector_service
+from core.rag_engine import rag_engine
+from services.vector_service import vector_service
 
 
 def main():

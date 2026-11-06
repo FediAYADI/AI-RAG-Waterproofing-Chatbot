@@ -2,15 +2,19 @@
 Configuration management using Pydantic Settings
 """
 
-from pydantic_settings import BaseSettings
-from pydantic import Field, ConfigDict
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field
 from typing import List
+from pathlib import Path
+from dotenv import load_dotenv
 import yaml
 import os
-from dotenv import load_dotenv
 
-# Load .env file
-load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), "..", "config", ".env"))
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+CONFIG_DIR = PROJECT_ROOT / "config"
+
+# Expose API keys (OPENAI_API_KEY, ANTHROPIC_API_KEY, ...) to os.getenv()
+load_dotenv(CONFIG_DIR / ".env")
 
 
 class AppConfig(BaseSettings):
@@ -20,26 +24,17 @@ class AppConfig(BaseSettings):
     debug: bool = False
 
 
-class CORSConfig(BaseSettings):
-    enabled: bool = True
-    origins: List[str] = ["http://localhost:3000", "http://localhost:5173"]
-    allow_credentials: bool = True
-    allow_methods: List[str] = ["*"]
-    allow_headers: List[str] = ["*"]
-
-
-class ServerConfig(BaseSettings):
-    host: str = "0.0.0.0"
-    port: int = 8000
-    workers: int = 4
-    reload: bool = False
-    cors: CORSConfig = Field(default_factory=CORSConfig)
-
-
 class VectorDBConfig(BaseSettings):
     type: str = "chromadb"
     path: str = "./data/vector_store"
     collection_name: str = "waterproofing_docs"
+    dimension: int = 384
+
+
+class EmbeddingConfig(BaseSettings):
+    model: str = "sentence-transformers/all-MiniLM-L6-v2"
+    provider: str = "huggingface"
+    batch_size: int = 100
     dimension: int = 384
 
 
@@ -60,46 +55,42 @@ class RAGConfig(BaseSettings):
     rerank_model: str = "cross-encoder"
 
 
-class EmbeddingConfig(BaseSettings):
-    model: str = "sentence-transformers/all-MiniLM-L6-v2"
-    provider: str = "huggingface"
-    batch_size: int = 100
-    dimension: int = 384
-
-
 class ProcessingConfig(BaseSettings):
     max_file_size: int = 10485760
-    allowed_extensions: List[str] = Field(default_factory=lambda: [".pdf", ".txt", ".docx", ".md", ".csv", ".xls", ".xlsx"])
+    allowed_extensions: List[str] = [".pdf", ".txt", ".docx", ".md", ".csv", ".xls", ".xlsx"]
     clean_text: bool = True
     remove_stopwords: bool = False
 
 
 class Settings(BaseSettings):
     app: AppConfig = Field(default_factory=AppConfig)
-    server: ServerConfig = Field(default_factory=ServerConfig)
     vector_db: VectorDBConfig = Field(default_factory=VectorDBConfig)
     embedding: EmbeddingConfig = Field(default_factory=EmbeddingConfig)
     llm: LLMConfig = Field(default_factory=LLMConfig)
     rag: RAGConfig = Field(default_factory=RAGConfig)
     processing: ProcessingConfig = Field(default_factory=ProcessingConfig)
 
-    model_config = ConfigDict(
-        env_file=os.path.join(os.path.dirname(os.path.dirname(__file__)), "..", "config", ".env"),
+    model_config = SettingsConfigDict(
+        env_file=str(CONFIG_DIR / ".env"),
         env_file_encoding="utf-8",
-        extra="allow"
+        extra="ignore",
     )
 
 
-def load_config_from_yaml(config_path: str = None) -> Settings:
+def load_config_from_yaml(config_path: str = str(CONFIG_DIR / "config.yaml")) -> Settings:
     """Load configuration from YAML file"""
-    if config_path is None:
-        config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "..", "config", "config.yaml")
-    
     if os.path.exists(config_path):
         with open(config_path, "r") as f:
             config_data = yaml.safe_load(f)
-        return Settings(**config_data)
-    return Settings()
+        settings = Settings(**config_data)
+    else:
+        settings = Settings()
+
+    # Relative vector store paths are resolved from the project root so the
+    # same store is used regardless of the current working directory.
+    if not os.path.isabs(settings.vector_db.path):
+        settings.vector_db.path = str((PROJECT_ROOT / settings.vector_db.path).resolve())
+    return settings
 
 
 settings = load_config_from_yaml()

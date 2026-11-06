@@ -12,7 +12,6 @@ if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
 
 from openai import OpenAI
-from sentence_transformers import SentenceTransformer
 from core.config import settings
 
 
@@ -27,6 +26,7 @@ class EmbeddingService:
         if self.provider == "openai":
             self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         elif self.provider == "huggingface":
+            from sentence_transformers import SentenceTransformer
             self.model = SentenceTransformer(self.model)
     
     def embed_text(self, text: str) -> List[float]:
