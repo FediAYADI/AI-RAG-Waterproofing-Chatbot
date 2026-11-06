@@ -117,4 +117,6 @@ activate and deactivate virtual environment:
 # deactivate
 deactivate
 
-tkhflkjhfsertghrtehrtergergsdhdyhregtrhdrtyjgsgdfssghfgnghjjrehtyujtryjyukutybfdghhfhsgdfhg
+run project :
+python -m http.server 3000
+ and open http://localhost:3000/integration-example.html in browser

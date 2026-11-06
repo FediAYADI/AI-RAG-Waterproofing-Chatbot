@@ -69,5 +69,5 @@ if __name__ == "__main__":
         host=settings.server.host,
         port=settings.server.port,
         reload=settings.server.reload,
-        workers=settings.server.workers
+        workers=1  # Use single worker to avoid multiple instances
     )

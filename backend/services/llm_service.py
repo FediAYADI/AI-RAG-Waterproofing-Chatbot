@@ -5,10 +5,16 @@ LLM Service - Handles response generation using various LLM providers
 from typing import List, Dict, Optional
 import os
 import sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Add backend to path
+backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
 
 from openai import OpenAI
 import anthropic
+from transformers import AutoModelForCausalLM, AutoTokenizer
+import torch
 from core.config import settings
 
 
@@ -26,6 +32,18 @@ class LLMService:
             self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         elif self.provider == "anthropic":
             self.client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        elif self.provider == "local":
+            # Load local HuggingFace model
+            print(f"Loading local model: {self.model}")
+            self.tokenizer = AutoTokenizer.from_pretrained(self.model)
+            self.model_obj = AutoModelForCausalLM.from_pretrained(
+                self.model,
+                torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+                device_map="auto" if torch.cuda.is_available() else None
+            )
+            if not torch.cuda.is_available():
+                self.model_obj = self.model_obj.to('cpu')
+            print("Local model loaded successfully")
     
     def generate_response(
         self,
@@ -48,6 +66,8 @@ class LLMService:
             return self._generate_openai(query, context, conversation_history)
         elif self.provider == "anthropic":
             return self._generate_anthropic(query, context, conversation_history)
+        elif self.provider == "local":
+            return self._generate_local(query, context, conversation_history)
         else:
             raise ValueError(f"Unsupported LLM provider: {self.provider}")
     
@@ -109,6 +129,41 @@ class LLMService:
             return response.content[0].text
         except Exception as e:
             raise Exception(f"Anthropic generation failed: {str(e)}")
+    
+    def _generate_local(
+        self,
+        query: str,
+        context: str,
+        conversation_history: Optional[List[Dict]] = None
+    ) -> str:
+        """Generate response using local HuggingFace model"""
+        try:
+            system_prompt = "You are a waterproofing expert assistant. Use the provided context to answer questions accurately and professionally."
+            
+            prompt = f"{system_prompt}\n\nContext:\n{context}\n\nQuestion: {query}\n\nAnswer:"
+            
+            # Tokenize input
+            inputs = self.tokenizer(prompt, return_tensors="pt", truncation=True, max_length=512)
+            
+            # Generate response
+            with torch.no_grad():
+                outputs = self.model_obj.generate(
+                    **inputs,
+                    max_new_tokens=self.max_tokens,
+                    temperature=self.temperature,
+                    do_sample=True,
+                    pad_token_id=self.tokenizer.eos_token_id
+                )
+            
+            # Decode response
+            response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+            
+            # Extract just the answer part
+            answer = response[len(prompt):].strip()
+            
+            return answer if answer else "I apologize, but I couldn't generate a response."
+        except Exception as e:
+            raise Exception(f"Local model generation failed: {str(e)}")
     
     def generate_response_stream(
         self,
