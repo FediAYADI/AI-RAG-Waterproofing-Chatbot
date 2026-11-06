@@ -21,11 +21,19 @@ class LLMService:
         self.temperature = settings.llm.temperature
         self.max_tokens = settings.llm.max_tokens
         self.streaming = settings.llm.streaming
-        
-        if self.provider == "openai":
-            self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        elif self.provider == "anthropic":
-            self.client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        self._client = None
+
+    @property
+    def client(self):
+        """API client, created on first use so commands that never call the LLM need no key"""
+        if self._client is None:
+            if self.provider == "openai":
+                self._client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            elif self.provider == "anthropic":
+                self._client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+            else:
+                raise ValueError(f"Unsupported LLM provider: {self.provider}")
+        return self._client
     
     def generate_response(
         self,

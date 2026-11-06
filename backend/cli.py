@@ -84,6 +84,15 @@ def _toggle(arg: str, current: bool) -> bool:
     return not current
 
 
+def _missing_api_keys() -> list:
+    required = {
+        "openai": "OPENAI_API_KEY",
+        "anthropic": "ANTHROPIC_API_KEY",
+    }
+    keys = {required.get(settings.llm.provider), required.get(settings.embedding.provider)}
+    return sorted(k for k in keys if k and not os.getenv(k))
+
+
 def run_chat(args: argparse.Namespace) -> int:
     try:
         import readline  # noqa: F401  (enables arrow-key history where available)
@@ -100,6 +109,8 @@ def run_chat(args: argparse.Namespace) -> int:
     count = vector_service.get_collection_stats().get("document_count", 0)
     if count == 0:
         print("\nWarning: the vector store is empty. Run `python backend/cli.py ingest` first.")
+    for key in _missing_api_keys():
+        print(f"\nWarning: {key} is not set in config/.env; questions will fail until it is.")
     print(f"\nLLM: {settings.llm.provider}/{settings.llm.model} | "
           f"Embeddings: {settings.embedding.provider}/{settings.embedding.model} | "
           f"Chunks: {count}")
@@ -244,8 +255,8 @@ def main(argv=None) -> int:
         print("\nGoodbye!")
         return 130
     except Exception as e:
-        # Service singletons are created on import; surface setup problems
-        # (missing API key, unreachable vector store, ...) without a traceback.
+        # Surface setup problems (bad config, unreachable vector store, ...)
+        # without a traceback.
         print(f"\nFailed to start the RAG pipeline: {e}", file=sys.stderr)
         print("Check config/config.yaml and the API keys in config/.env.", file=sys.stderr)
         return 1
